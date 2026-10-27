@@ -1,0 +1,9 @@
+check,result
+GPS observations,17276
+Unique GPS trips,40
+Metadata trips,40
+Invalid timestamps,0
+Duplicate trip/sequence records,0
+Invalid coordinate rows,0
+Matching shape IDs,20
+Unmatched synthetic shape IDs,0

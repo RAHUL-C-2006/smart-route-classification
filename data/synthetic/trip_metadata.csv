@@ -1,0 +1,41 @@
+trip_id,shape_id,route_id,route_short_name,route_long_name,distance_m,avg_speed_kmph,start_time
+synth_0001,306-P UP,3065,306-P,Arasanahalli ⇔ KR Market,45630.7,17.1,2026-09-11 08:35:00
+synth_0002,306-P UP,3065,306-P,Arasanahalli ⇔ KR Market,45630.7,19.1,2026-09-11 13:21:00
+synth_0003,KMT-NYD UP,9333,KMT-NYD,KR Market ⇔ Nyaya Degula,3094.7,8.0,2026-09-11 12:10:00
+synth_0004,KMT-NYD UP,9333,KMT-NYD,KR Market ⇔ Nyaya Degula,3094.7,17.8,2026-09-11 17:00:00
+synth_0005,D38G-HLG-ANK UP,6493,D38G-HLG-ANK,Anekal ⇔ Depot-38 Gate,18374.9,16.1,2026-09-11 11:57:00
+synth_0006,D38G-HLG-ANK UP,6493,D38G-HLG-ANK,Anekal ⇔ Depot-38 Gate,18374.9,14.8,2026-09-11 08:18:00
+synth_0007,285-E KBS-KKLV DOWN,7185,285-E KBS-KKLV,Kakolu Village ⇔ Kempegowda Bus Station,32970.4,17.9,2026-09-11 10:26:00
+synth_0008,285-E KBS-KKLV DOWN,7185,285-E KBS-KKLV,Kakolu Village ⇔ Kempegowda Bus Station,32970.4,15.7,2026-09-11 15:57:00
+synth_0009,89-E UP,4900,89-E,Cauvery Nagara ⇔ Kempegowda Bus Station,7377.0,18.3,2026-09-11 16:33:00
+synth_0010,89-E UP,4900,89-E,Cauvery Nagara ⇔ Kempegowda Bus Station,7377.0,18.3,2026-09-11 16:09:00
+synth_0011,250-SB DOWN,2486,250-SB,Sasuveghatta ⇔ Kempegowda Bus Station,21521.0,21.4,2026-09-11 07:05:00
+synth_0012,250-SB DOWN,2486,250-SB,Sasuveghatta ⇔ Kempegowda Bus Station,21521.0,15.4,2026-09-11 12:05:00
+synth_0013,501-BH BTM-BSK-HBLB DOWN,8202,501-BH BTM-BSK-HBLB,Hebbala Bridge ⇔ Kuvempunagara Bus station (BTM Layout),29795.9,13.2,2026-09-11 13:10:00
+synth_0014,501-BH BTM-BSK-HBLB DOWN,8202,501-BH BTM-BSK-HBLB,Hebbala Bridge ⇔ Kuvempunagara Bus station (BTM Layout),29795.9,20.3,2026-09-11 10:39:00
+synth_0015,285-B DOWN,1333,285-B,KR Market ⇔ Ramagondanahalli,23021.2,17.7,2026-09-11 15:47:00
+synth_0016,285-B DOWN,1333,285-B,KR Market ⇔ Ramagondanahalli,23021.2,23.8,2026-09-11 17:44:00
+synth_0017,BEMLA-12 DOWN,4535,BEMLA-12,CS-BEML Factory ⇔ CS-Arakere Gate,14488.8,16.1,2026-09-11 13:39:00
+synth_0018,BEMLA-12 DOWN,4535,BEMLA-12,CS-BEML Factory ⇔ CS-Arakere Gate,14488.8,13.3,2026-09-11 07:48:00
+synth_0019,243-J UP,2939,243-J,Bhavani Nagara 2nd Stage ⇔ Kempegowda Bus Station,15034.2,21.6,2026-09-11 10:49:00
+synth_0020,243-J UP,2939,243-J,Bhavani Nagara 2nd Stage ⇔ Kempegowda Bus Station,15034.2,12.7,2026-09-11 17:36:00
+synth_0021,BC-3A D38G-JAPC UP,8426,BC-3A D38G-JAPC,Jigani APC Circle ⇔ Depot-38 Gate,12239.5,10.0,2026-09-11 09:36:00
+synth_0022,BC-3A D38G-JAPC UP,8426,BC-3A D38G-JAPC,Jigani APC Circle ⇔ Depot-38 Gate,12239.5,17.6,2026-09-11 13:56:00
+synth_0023,MKT-5H SNBS-JBS-HRH UP,9094,MKT-5H SNBS-JBS-HRH,Harohalli ⇔ Shanthinagara Bus Station,38808.9,16.7,2026-09-11 17:20:00
+synth_0024,MKT-5H SNBS-JBS-HRH UP,9094,MKT-5H SNBS-JBS-HRH,Harohalli ⇔ Shanthinagara Bus Station,38808.9,17.0,2026-09-11 12:50:00
+synth_0025,242-B KBS-JSN UP,1730,242-B KBS-JSN,Jnanashakthi Nagara ⇔ Kempegowda Bus Station,15170.8,16.8,2026-09-11 17:08:00
+synth_0026,242-B KBS-JSN UP,1730,242-B KBS-JSN,Jnanashakthi Nagara ⇔ Kempegowda Bus Station,15170.8,17.5,2026-09-11 08:09:00
+synth_0027,500-F UP,1024,500-F,Kadugodi Bus Station ⇔ Central Silk Board,25052.4,18.0,2026-09-11 12:50:00
+synth_0028,500-F UP,1024,500-F,Kadugodi Bus Station ⇔ Central Silk Board,25052.4,22.7,2026-09-11 10:55:00
+synth_0029,VV-EXP KNP-1 UP,8995,VV-EXP KNP-1,Kanakapura Bus Stand ⇔ Banashankari Bus Station,48120.3,20.7,2026-09-11 16:30:00
+synth_0030,VV-EXP KNP-1 UP,8995,VV-EXP KNP-1,Kanakapura Bus Stand ⇔ Banashankari Bus Station,48120.3,22.2,2026-09-11 12:34:00
+synth_0031,210-TP DOWN,8822,210-TP,Doddakallasandra Metro Station ⇔ Jayanagara Bus Station,12730.2,12.8,2026-09-11 06:18:00
+synth_0032,210-TP DOWN,8822,210-TP,Doddakallasandra Metro Station ⇔ Jayanagara Bus Station,12730.2,11.2,2026-09-11 06:21:00
+synth_0033,319-G KBS-TNF-D41G DOWN,5819,319-G KBS-TNF-D41G,Depot-41 Gate ⇔ Kempegowda Bus Station,32026.3,14.4,2026-09-11 13:53:00
+synth_0034,319-G KBS-TNF-D41G DOWN,5819,319-G KBS-TNF-D41G,Depot-41 Gate ⇔ Kempegowda Bus Station,32026.3,27.0,2026-09-11 12:17:00
+synth_0035,144-E SBS-NLS-VVK UP,8490,144-E SBS-NLS-VVK,Shivajinagara Bus Station ⇔ Vivek Nagara,6985.9,18.8,2026-09-11 13:05:00
+synth_0036,144-E SBS-NLS-VVK UP,8490,144-E SBS-NLS-VVK,Shivajinagara Bus Station ⇔ Vivek Nagara,6985.9,17.3,2026-09-11 10:15:00
+synth_0037,500-EB DOWN,8013,500-EB,Tin Factory ⇔ Electronic City Wipro Main Gate,31734.0,20.1,2026-09-11 16:54:00
+synth_0038,500-EB DOWN,8013,500-EB,Tin Factory ⇔ Electronic City Wipro Main Gate,31734.0,17.7,2026-09-11 17:12:00
+synth_0039,215-C D34G-KMT DOWN,1823,215-C D34G-KMT,KR Market (Kalasipalya) ⇔ Depot-34 Gate,12588.7,19.0,2026-09-11 15:43:00
+synth_0040,215-C D34G-KMT DOWN,1823,215-C D34G-KMT,KR Market (Kalasipalya) ⇔ Depot-34 Gate,12588.7,21.9,2026-09-11 11:01:00

@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route Mobility Performance</title>
+<style>
+:root{
+  --bg:#eceff3;--card:#fff;--soft:#f4f6f9;--text:#17202e;--muted:#5a6779;--line:#dce2ea;
+  --nav:#0f2a4a;--accent:#2e75b6;
+  --ok:#237a55;--slow:#b4690e;--cong:#b3261e;
+  --ok-bg:rgba(35,122,85,.12);--slow-bg:rgba(217,140,31,.16);--cong-bg:rgba(179,38,30,.11);
+  --map-bg:#e7ebf0;--road:#bcc5d0;--casing:#fff;--sel:#fff6e5;
+  --shadow:0 1px 2px rgba(15,30,50,.06),0 6px 18px rgba(15,30,50,.05);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d1218;--card:#161c25;--soft:#1d2530;--text:#e8ecf2;--muted:#97a3b5;--line:#2a3340;
+  --nav:#0a111c;--accent:#6aaee6;
+  --ok:#55c28f;--slow:#f0b04a;--cong:#ff7f74;
+  --ok-bg:rgba(85,194,143,.14);--slow-bg:rgba(240,176,74,.15);--cong-bg:rgba(255,127,116,.14);
+  --map-bg:#1b232d;--road:#3b4756;--casing:#0d1218;--sel:#202a36;--shadow:none;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* app bar */
+.appbar{position:sticky;top:0;z-index:20;background:var(--nav);color:#fff;display:flex;align-items:center;gap:20px;padding:0 20px;min-height:58px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;padding:8px 0}
+.brand svg{width:26px;height:26px}
+.brand b{display:block;font-size:17px;font-weight:600;line-height:1.15}
+.brand span{display:block;font-size:12px;opacity:.7}
+#tabs{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap}
+#tabs button{background:none;border:0;border-bottom:3px solid transparent;color:rgba(255,255,255,.72);padding:18px 14px 12px;border-radius:0}
+#tabs button:hover{color:#fff}
+#tabs button[aria-selected="true"]{color:#fff;border-bottom-color:#fff}
+.strip{background:#fff6df;color:#5b4410;border-bottom:1px solid #ecd48b;padding:7px 20px;font-size:13px}
+@media (prefers-color-scheme:dark){.strip{background:#2b2515;color:#e9d9a4;border-color:#5a4a22}}
+main{padding:16px 20px 40px;max-width:1500px;margin:0 auto}
+.view{display:none}.view.active{display:block}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.card-h{font-weight:600;font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.card-h small{font-weight:400;color:var(--muted);font-size:12.5px}
+.note{color:var(--muted);font-size:13px;margin:6px 0 0}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+
+/* overview tiles */
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(3,1.25fr) repeat(2,1fr);margin-bottom:16px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.tile .l{font-size:22px;font-weight:600}
+.tile .v{font-size:46px;font-weight:600;line-height:1.1;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.tile.small .v{font-size:34px}
+.tile .s{color:var(--muted);font-size:12.5px}
+.tile.ok .l,.tile.ok .v{color:var(--ok)}.tile.slow .l,.tile.slow .v{color:var(--slow)}.tile.cong .l,.tile.cong .v{color:var(--cong)}
+.tile.small .l{font-size:14px;color:var(--muted);font-weight:500}
+.ov{display:grid;gap:16px;grid-template-columns:minmax(260px,1fr) minmax(0,1.5fr) minmax(260px,1fr);margin-bottom:16px}
+.ov>.card{height:560px;display:flex;flex-direction:column}
+.ov .scroll{overflow:auto;flex:1}
+.barrow{display:grid;grid-template-columns:118px 1fr 52px;gap:8px;align-items:center;width:100%;background:none;border:0;border-radius:8px;padding:5px 6px;text-align:left}
+.barrow:hover{background:var(--soft)}
+.barrow .nm{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stack{display:flex;height:16px;border-radius:4px;overflow:hidden;gap:2px;background:var(--soft)}
+.stack i{display:block;min-width:2px}
+.stack .ok{background:var(--ok)}.stack .slow{background:#d98c1f}.stack .cong{background:var(--cong)}
+.barrow .pc{font-size:12.5px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.feed{display:flex;flex-direction:column;gap:8px}
+.fi{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card);text-align:left;width:100%}
+.fi:hover{background:var(--soft)}
+.fi .ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px}
+.fi .ic.hot{background:var(--cong-bg);color:var(--cong)}.fi .ic.miss{background:var(--slow-bg);color:var(--slow)}
+.fi b{display:block;font-size:13.5px}.fi span{display:block;color:var(--muted);font-size:12.5px}
+.health{display:flex;flex-direction:column}
+.hrow{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+.hrow:last-child{border-bottom:0}
+.hrow .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);align-self:center}
+.hrow .dot.warn{background:#d98c1f}
+.hrow b{font-weight:600}.hrow span{color:var(--muted);font-size:13px}.hrow em{font-style:normal;font-variant-numeric:tabular-nums;font-weight:600}
+
+/* route explorer */
+.explorer{display:grid;grid-template-columns:320px minmax(0,1fr) 370px;gap:0;height:calc(100vh - 140px);min-height:640px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
+.pane{overflow:auto;min-width:0}
+.list{border-right:1px solid var(--line);background:var(--soft);display:flex;flex-direction:column}
+.tools{padding:12px;background:var(--card);border-bottom:1px solid var(--line);display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.tools input{grid-column:1/3}
+.tools input,.tools select{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 10px;min-width:0}
+#rt-list{padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto;flex:1}
+.rcard{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left;width:100%}
+.rcard.ok{border-left-color:var(--ok)}.rcard.slow{border-left-color:#d98c1f}.rcard.cong{border-left-color:var(--cong)}
+.rcard:hover{background:var(--soft)}
+.rcard[aria-pressed="true"]{background:var(--sel);box-shadow:0 0 0 2px var(--accent)}
+.rcard .r1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.rcard .r1 b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rcard .r2{display:flex;gap:12px;color:var(--muted);font-size:12.5px;margin:4px 0 6px;flex-wrap:wrap}
+.rcard .r3{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dl{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dl.ok{color:var(--ok)}.dl.slow{color:var(--slow)}.dl.cong{color:var(--cong)}
+.chip{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600;border:1px solid transparent}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.slow{background:var(--slow-bg);color:var(--slow)}.chip.cong{background:var(--cong-bg);color:var(--cong)}
+.chip.hot{background:var(--cong-bg);color:var(--cong)}.chip.mute{background:var(--soft);color:var(--muted);border-color:var(--line)}
+.mapwrap{position:relative;background:var(--map-bg)}
+.map{width:100%;height:100%;display:block}
+.maptools{position:absolute;top:10px;left:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px;box-shadow:var(--shadow)}
+.maptools label{display:flex;gap:5px;align-items:center;cursor:pointer}
+.maplegend{position:absolute;bottom:10px;left:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;box-shadow:var(--shadow)}
+.maplegend div{display:flex;gap:6px;align-items:center;margin:2px 0}
+.maplegend i{width:22px;height:5px;border-radius:3px;display:inline-block}
+.detail{border-left:1px solid var(--line);background:var(--soft);padding:14px;display:flex;flex-direction:column;gap:12px}
+.dh h2{margin:0;font-size:20px}.dh p{margin:2px 0 0;color:var(--muted)}
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.dcard h3{margin:0 0 8px;font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stats{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stat{padding:9px 12px;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+.stat:nth-child(2n){border-right:0}.stat:nth-last-child(-n+2){border-bottom:0}
+.stat .k{color:var(--muted);font-size:12.5px;cursor:help}
+.stat .vv{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+.range{position:relative;height:10px;border-radius:5px;background:var(--soft);border:1px solid var(--line);margin:10px 0 6px}
+.range .f{position:absolute;top:0;bottom:0;background:#d98c1f;border-radius:5px;opacity:.75}
+.range .m{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--text);border-radius:2px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12.5px}
+.n{text-align:right;font-variant-numeric:tabular-nums}
+.zc{border-radius:10px;padding:9px 12px;font-size:13px}
+.zc.found{background:var(--ok-bg)}.zc.miss{background:var(--slow-bg)}
+
+/* shared svg */
+.map-bg{fill:var(--map-bg)}.road{stroke:var(--road);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.casing{stroke:var(--casing);stroke-width:11;stroke-linejoin:round;stroke-linecap:round}
+.seg{stroke-width:7;stroke-linejoin:round;stroke-linecap:round}
+.stopdot{fill:#fff;stroke:#243246;stroke-width:1.8}
+.hotring{fill:rgba(192,57,43,.18);stroke:#c0392b;stroke-width:2.2}
+.lbl{fill:var(--text);font-size:12.5px;font-weight:600;paint-order:stroke;stroke:var(--map-bg);stroke-width:3.5px}
+.chart{width:100%;height:auto;display:block}
+.chart .gridline{stroke:var(--line);stroke-width:1}.chart .axis{stroke:var(--muted);stroke-width:1}
+.chart .tick{fill:var(--muted);font-size:13px}.chart .axlabel{fill:var(--muted);font-size:13.5px}
+.chart .barval{fill:var(--text);font-size:13.5px;font-weight:600}
+#rd-chart .tick{font-size:11px}#rd-chart .barval{font-size:11px}.chart .band{fill:rgba(217,140,31,.16)}
+
+/* quality */
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;max-width:420px;text-align:center}
+.cm div{padding:12px 6px;border-radius:6px}.cm .h{color:var(--muted);font-size:12.5px;padding:4px}
+.cm .good{background:var(--ok-bg)}.cm .bad{background:var(--cong-bg)}
+ul.plain{margin:6px 0 0;padding-left:20px}ul.plain li{margin:4px 0}
+.scroll-x{overflow-x:auto}
+
+/* live preview */
+.live{display:grid;gap:24px;grid-template-columns:minmax(320px,380px) minmax(0,1fr);align-items:start}
+.livecol{display:grid;gap:16px;min-width:0}
+.phonecol{display:flex;flex-direction:column;align-items:center;gap:10px}
+.ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ctl select,.ctl button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px}.ctl button:hover{background:var(--soft)}
+.phone{position:relative;width:316px;height:640px;border-radius:42px;background:#0c0f14;padding:11px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.screen{position:relative;width:100%;height:100%;border-radius:32px;overflow:hidden;background:var(--map-bg)}
+.notch{position:absolute;z-index:5;top:11px;left:50%;transform:translateX(-50%);width:110px;height:24px;background:#0c0f14;border-radius:0 0 16px 16px}
+.demo{position:absolute;z-index:6;top:40px;left:50%;transform:translateX(-50%);background:var(--nav);color:#fff;font-size:11.5px;font-weight:600;padding:3px 12px;border-radius:999px;white-space:nowrap}
+.pill{position:absolute;z-index:4;top:68px;left:12px;right:12px;background:var(--card);border-radius:999px;padding:7px 14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lv-map{position:absolute;inset:0 0 168px 0}
+#lv-map svg{width:100%;height:100%;display:block}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;background:var(--card);border-radius:22px;padding:12px 14px;box-shadow:0 2px 14px rgba(0,0,0,.25)}
+.sheet .a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.badge{border:2px solid var(--cong);color:var(--text);border-radius:6px;padding:1px 8px;font-weight:700;font-size:14px}
+.sheet .big{font-size:22px;font-weight:700;color:var(--ok)}
+.sheet .b{display:flex;justify-content:space-between;gap:8px;padding-top:8px;color:var(--muted);font-size:13px}
+.sheet .c{padding-top:6px;font-size:13px}
+.phonecol input[type=range]{width:316px}
+
+@media (max-width:1100px){
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  .ov{grid-template-columns:1fr}.ov>.card{height:auto;max-height:520px}
+  .ov .ovmap{height:480px}
+  .explorer{grid-template-columns:1fr;height:auto}
+  .list{max-height:380px;border-right:0;border-bottom:1px solid var(--line)}
+  .mapwrap{height:480px}.detail{border-left:0;border-top:1px solid var(--line)}
+  .live{grid-template-columns:1fr}
+  #tabs{margin-left:0;width:100%}
+  #tabs button{padding:10px 12px 8px}
+}
+@media (max-width:560px){main{padding:12px}.tile .v{font-size:36px}.appbar{padding:0 12px}}
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 21v-4M16 21v-4"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/></svg>
+    <div><b>Route Mobility Performance</b><span>Smart Route Classification for Public Transport</span></div>
+  </div>
+  <nav id="tabs" role="tablist" aria-label="Dashboard views"></nav>
+</header>
+<div class="strip"><b>Synthetic data.</b> All GPS traces were generated from real GTFS route shapes with planted patterns so every result can be checked. Nothing is validated on real buses.</div>
+
+<main>
+<!-- OVERVIEW -->
+<section class="view" id="v-overview" aria-label="Overview">
+  <div class="tiles" id="tiles"></div>
+  <div class="ov">
+    <div class="card"><div class="card-h">Routes by trip status <small>select a route to explore it</small></div>
+      <div class="scroll" id="ov-bars"></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Normal</span><span><i style="background:#d98c1f"></i>Slow</span><span><i style="background:var(--cong)"></i>Congested</span></div></div>
+    <div class="card ovmap" style="padding:0;overflow:hidden;position:relative"><div id="ov-map" style="height:100%"></div>
+      <div class="maplegend"><div><i style="background:#c0392b;height:10px;width:10px;border-radius:50%"></i>Slow spot found</div><div><i style="background:none;border:2px solid var(--text);height:12px;width:12px;border-radius:50%"></i>Planted zone found</div><div><i style="background:none;border:2px dashed var(--slow);height:12px;width:12px;border-radius:50%"></i>Planted zone missed</div></div></div>
+    <div class="card"><div class="card-h">Findings <small>slow spots</small></div><div class="scroll"><div class="feed" id="ov-feed"></div></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-h">Delay by time of day <small>average per trip, by the middle of the journey</small></div><div id="ov-hour"></div></div>
+    <div class="card health"><div class="card-h">How well the analysis performed <small>against known synthetic answers</small></div><div id="ov-health"></div></div>
+  </div>
+</section>
+
+<!-- ROUTES -->
+<section class="view" id="v-routes" aria-label="Route explorer">
+  <div class="explorer">
+    <aside class="pane list" aria-label="Routes">
+      <div class="tools">
+        <input id="rt-search" type="search" placeholder="Search routes" aria-label="Search routes">
+        <select id="rt-sort" aria-label="Sort routes"><option value="delay">Sort: delay</option><option value="speed">Sort: speed</option><option value="stops">Sort: stops</option><option value="name">Sort: name</option></select>
+        <select id="rt-filter" aria-label="Filter routes"><option value="all">All routes</option><option value="cong">Congested</option><option value="slow">Slow</option><option value="ok">Normal</option><option value="hot">With a slow spot</option></select>
+      </div>
+      <div id="rt-list"></div>
+    </aside>
+    <div class="pane mapwrap">
+      <div class="maptools"><label><input type="checkbox" id="ly-sec" checked> Section speed</label><label><input type="checkbox" id="ly-stop" checked> Bus stops</label><label><input type="checkbox" id="ly-hot" checked> Slow spots</label><label><input type="checkbox" id="ly-all"> Show all routes</label></div>
+      <div id="rt-map" style="height:100%"></div>
+      <div class="maplegend"><b style="font-size:12px">Time to cross a 200 m section</b>
+        <div><i style="background:#3aa675"></i>Normal</div><div><i style="background:#e8a13a"></i>Slower than usual</div><div><i style="background:#d63a2f"></i>Hotspot level (1.8x or more)</div><div><i style="background:#7a1c1c"></i>Severe (3x or more)</div><div><i style="background:#9aa5b4"></i>Not enough data</div></div>
+    </div>
+    <aside class="pane detail" id="rt-detail" aria-live="polite"></aside>
+  </div>
+  <p class="note">Status bands are display thresholds for this dashboard (Normal under 30% over timetable, Slow 30 to 50%, Congested 50% or more), not an official standard.</p>
+</section>
+
+<!-- QUALITY -->
+<section class="view" id="v-quality" aria-label="Data quality">
+  <div class="grid2">
+    <div class="card"><div class="card-h">Route matching <small>assigning each GPS ping to its route</small></div>
+      <div id="q-match-chart"></div><div class="scroll-x" id="q-match-table" style="margin-top:8px"></div><p class="note" id="q-match-note"></p>
+      <ul class="plain note"><li><b>Midpoint search</b> missed an 830 m segment and produced 5 false route deviations.</li><li><b>Exact search</b> fixed that case.</li><li><b>Sequence-aware (final)</b> also uses the order of pings, so routes that pass the same road twice no longer jump to the wrong pass.</li></ul></div>
+    <div class="card"><div class="card-h">GPS reliability model <small>threshold <span id="q-thr"></span></small></div>
+      <div class="scroll-x" id="q-rel"></div>
+      <h3 style="margin:14px 0 6px;font-size:14px">Confusion matrix, 120 new trips</h3><div class="cm" id="q-cm"></div>
+      <ul class="plain note"><li>Recall is about 43%: most injected noise stays close to the route.</li><li>The probability is not a calibrated reliability score.</li></ul></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card"><div class="card-h">Noise versus route deviation</div>
+      <p class="note" style="margin:0 0 8px">A deviation needs 3 or more pings in a row more than 30 m from the route that the model mostly does not flag. No real detours exist in the synthetic data, so zero is correct.</p>
+      <div class="scroll-x" id="q-dev"></div></div>
+    <div class="card"><div class="card-h">Limitations</div>
+      <ul class="plain"><li>All data is synthetic. Injected GPS noise is not real route deviation.</li><li>The matcher is a first-pass sequence-aware method, not a full probabilistic matcher.</li><li>The hotspot search excludes sections beside bus stops, so it missed 2 of 8 planted zones.</li><li>Measured trip distance is about 0.6% below route length because the start and end of each trip are not covered.</li><li>Speeds come from pings 10 to 30 seconds apart.</li><li>Live tracking and arrival predictions need a real data feed and remain future scope.</li></ul></div>
+  </div>
+</section>
+
+<!-- LIVE -->
+<section class="view" id="v-live" aria-label="Live tracking preview">
+  <div class="live">
+    <div class="phonecol">
+      <div class="ctl"><label for="lv-route">Route</label><select id="lv-route"></select><button type="button" id="lv-play">Pause</button></div>
+      <div class="phone"><div class="notch"></div><div class="demo">DEMO · simulated, not live</div>
+        <div class="screen"><div class="pill" id="lv-pill"></div><div id="lv-map"></div>
+          <div class="sheet"><div class="a"><span class="badge" id="lv-badge"></span><span class="big">Demo</span></div>
+            <div class="b"><span id="lv-pos"></span><span id="lv-next"></span></div><div class="c" id="lv-ahead"></div></div></div></div>
+      <input type="range" id="lv-scrub" min="0" max="100" value="0" aria-label="Position along the route">
+    </div>
+    <div class="livecol">
+    <div class="card"><div class="card-h">Live tracking preview <small>future scope</small></div>
+      <p style="margin-top:0">This screen shows how a rider could follow a bus on one of these routes. A marker replays a position along the route's real shape. Drag the slider to move it.</p>
+      <ul class="plain"><li><b>Shown:</b> route line, bus stops, the slow spots found by the analysis, the distance to the next stop and to the next slow spot.</li>
+        <li><b>Not shown:</b> real bus positions or arrival times. Those need a live vehicle-position feed from the transit agency, which this project does not have.</li>
+        <li><b>How it would connect:</b> the replay position would be replaced by positions from that feed, run through the same matching and reliability steps used here.</li></ul>
+      <p class="note">The marker moves at a fixed demo speed and is not tied to any real bus.</p></div>
+    <div class="card"><div class="card-h">Jump to a point on this route</div><div class="ctl" id="lv-jumps"></div><p class="note">Slow spots are the ones found by the hotspot search.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+<script src="data.js"></script>
+<script>
+(function(){
+const D=window.DASH;
+if(!D||!D.geo){document.querySelector('main').innerHTML='<div class="card"><b>Dashboard data not found.</b><p>Run the data and geometry steps so that <code>dashboard/data.js</code> contains the route geometry, then reload this page.</p></div>';return;}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(n,d)=>n==null?'–':Number(n).toLocaleString('en-US',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const NS='http://www.w3.org/2000/svg';
+function svgEl(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+function txt(p,x,y,s,a){const t=svgEl('text',Object.assign({x:x,y:y},a||{}),p);t.textContent=s;return t;}
+function tip(n,s){const t=document.createElementNS(NS,'title');t.textContent=s;n.appendChild(t);}
+function ticks(lo,hi,n){const span=hi-lo,raw=span/n,p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p,step=(f<1.5?1:f<3?2:f<7?5:10)*p,o=[];for(let v=Math.ceil(lo/step)*step;v<=hi+1e-9;v+=step)o.push(+v.toFixed(10));return o;}
+function table(el,heads,rows,num){num=num||[];el.innerHTML='<table><thead><tr>'+heads.map((h,i)=>'<th class="'+(num.includes(i)?'n':'')+'">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map((c,i)=>'<td class="'+(num.includes(i)?'n':'')+'">'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';}
+function chart(el,o){
+  const W=o.W||640,H=o.H||300,m=o.m||{l:58,r:14,t:12,b:46};el.innerHTML='';
+  const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H,'class':'chart',role:'img','aria-label':o.label||''},el);
+  const sx=v=>m.l+(v-o.xd[0])/(o.xd[1]-o.xd[0])*(W-m.l-m.r),sy=v=>H-m.b-(v-o.yd[0])/(o.yd[1]-o.yd[0])*(H-m.t-m.b);
+  (o.yticks||ticks(o.yd[0],o.yd[1],4)).forEach(v=>{svgEl('line',{x1:m.l,x2:W-m.r,y1:sy(v),y2:sy(v),'class':'gridline'},svg);txt(svg,m.l-8,sy(v)+4,o.yfmt?o.yfmt(v):v,{'class':'tick','text-anchor':'end'});});
+  if(o.xticks!==false)(o.xticks||ticks(o.xd[0],o.xd[1],7)).forEach(v=>txt(svg,sx(v),H-m.b+18,o.xfmt?o.xfmt(v):v,{'class':'tick','text-anchor':'middle'}));
+  svgEl('line',{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,'class':'axis'},svg);
+  if(o.xlabel)txt(svg,(m.l+W-m.r)/2,H-6,o.xlabel,{'class':'axlabel','text-anchor':'middle'});
+  if(o.ylabel){const cy=(m.t+H-m.b)/2;txt(svg,14,cy,o.ylabel,{'class':'axlabel','text-anchor':'middle',transform:'rotate(-90 14 '+cy+')'});}
+  return {svg:svg,sx:sx,sy:sy,m:m,W:W,H:H};
+}
+function peaks(c){(D.meta.peaks||[]).forEach(p=>{const r=svgEl('rect',{x:c.sx(p.start_hour),y:c.m.t,width:c.sx(p.end_hour)-c.sx(p.start_hour),height:c.H-c.m.b-c.m.t,'class':'band'});c.svg.insertBefore(r,c.svg.firstChild);});}
+function vbars(el,items,o){
+  const c=chart(el,{xd:o.xd,yd:[0,o.ymax],xticks:o.xticks,xfmt:o.xfmt,xlabel:o.xlabel,ylabel:o.ylabel,H:o.H,W:o.W,m:o.m,label:o.label});peaks(c);
+  items.forEach(it=>{const x0=c.sx(it.x-o.bw/2),x1=c.sx(it.x+o.bw/2),r=svgEl('rect',{x:x0,y:c.sy(it.v),width:x1-x0,height:Math.max(c.sy(0)-c.sy(it.v),0),fill:it.color,rx:3},c.svg);tip(r,it.tip);
+    if(it.text)txt(c.svg,(x0+x1)/2,c.sy(it.v)-5,it.text,{'class':'barval','text-anchor':'middle'});});
+  return c;
+}
+
+/* ---------- data prep ---------- */
+const bandOf=d=>d<30?'ok':d<50?'slow':'cong';
+const BN={ok:'Normal',slow:'Slow',cong:'Congested'};
+const BC={ok:'var(--ok)',slow:'#d98c1f',cong:'var(--cong)'};
+const trips=D.mobility.trips;
+const routes=D.mobility.routes.map(r=>{
+  const name=r.route_short_name,ts=trips.filter(t=>t.route_short_name===name),g=D.geo[name]||{length_m:0,path:[],stops:[]};
+  return {name:name,delay:r.mean_delay_pct,delayMin:avg(ts.map(t=>t.duration_min-t.scheduled_duration_min)),speed:r.observed_speed,tt:r.timetable_speed,
+    nStops:r.n_stops,trips:ts,geo:g,len:g.length_m,band:bandOf(r.mean_delay_pct),slowX:r.timetable_speed/r.observed_speed,
+    hot:D.hotspots.hotspots.filter(h=>h.route===name),zone:D.hotspots.zones.find(z=>z.route_short_name===name)||null,
+    secs:D.hotspots.sections.filter(s=>s.route_short_name===name)};
+});
+const byName={};routes.forEach(r=>byName[r.name]=r);
+const ratioColor=r=>r==null?'#9aa5b4':r>=3?'#7a1c1c':r>=1.8?'#d63a2f':r>=1.3?'#e8a13a':'#3aa675';
+
+/* ---------- map ---------- */
+function bounds(pts){let a=90,b=-90,c=180,d=-180;pts.forEach(p=>{a=Math.min(a,p[0]);b=Math.max(b,p[0]);c=Math.min(c,p[1]);d=Math.max(d,p[1]);});return {latMin:a,latMax:b,lonMin:c,lonMax:d};}
+function projector(b,W,H,pad){const latC=(b.latMin+b.latMax)/2,k=Math.cos(latC*Math.PI/180),xr=Math.max((b.lonMax-b.lonMin)*k*111320,1),yr=Math.max((b.latMax-b.latMin)*110574,1),s=Math.min((W-2*pad)/xr,(H-2*pad)/yr),ox=(W-xr*s)/2,oy=(H-yr*s)/2;
+  return (lat,lon)=>[ox+(lon-b.lonMin)*k*111320*s,oy+(b.latMax-lat)*110574*s];}
+const pstr=a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+function drawMap(el,o){
+  const W=o.W,H=o.H,sel=o.selected?byName[o.selected]:null,zoom=sel&&!o.fitAll;
+  const pts=zoom?sel.geo.path:routes.reduce((a,r)=>a.concat(r.geo.path),[]);
+  const P=projector(bounds(pts),W,H,zoom?70:26);el.innerHTML='';
+  const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H,'class':'map',role:'img','aria-label':o.label,preserveAspectRatio:'xMidYMid slice'},el);
+  svgEl('rect',{width:W,height:H,'class':'map-bg'},svg);
+  routes.forEach(r=>{if(sel&&r===sel)return;svgEl('polyline',{points:pstr(r.geo.path.map(p=>P(p[0],p[1]))),'class':'road',fill:'none'},svg);});
+  if(sel){
+    const path=sel.geo.path,xy=path.map(p=>P(p[0],p[1])),secs={};sel.secs.forEach(s=>secs[s.start_m]=s);
+    svgEl('polyline',{points:pstr(xy),'class':'casing',fill:'none'},svg);
+    if(o.sections){
+      let cur=null,run=[];const flush=()=>{if(run.length>1)svgEl('polyline',{points:pstr(run),'class':'seg',fill:'none',stroke:cur},svg);};
+      for(let i=0;i<path.length-1;i++){const s=secs[Math.floor(path[i][2]/200)*200],c=ratioColor(s?s.mean_ratio:null);
+        if(c!==cur){flush();cur=c;run=[xy[i]];}run.push(xy[i+1]);}
+      flush();
+    }else svgEl('polyline',{points:pstr(xy),'class':'seg',fill:'none',stroke:'#2e75b6'},svg);
+    if(o.stops)sel.geo.stops.forEach(s=>{const q=P(s[0],s[1]),c=svgEl('circle',{cx:q[0],cy:q[1],r:3.6,'class':'stopdot'},svg);tip(c,s[3]+' ('+fmt(s[2]/1000,1)+' km)');});
+    [['A',xy[0]],['B',xy[xy.length-1]]].forEach(e=>{svgEl('circle',{cx:e[1][0],cy:e[1][1],r:11,fill:'#17202e',stroke:'#fff','stroke-width':2},svg);txt(svg,e[1][0],e[1][1]+4,e[0],{fill:'#fff','font-size':12,'font-weight':700,'text-anchor':'middle'});});
+  }
+  const hs=sel?sel.hot:D.hotspots.hotspots.map(h=>({route:h.route,lat:h.lat,lon:h.lon,max_ratio:h.max_ratio,start_m:h.start_m,end_m:h.end_m,trips:h.trips}));
+  const zs=sel?(sel.zone?[sel.zone]:[]):D.hotspots.zones;
+  if(o.zones)zs.forEach(z=>{const q=P(z.centre_lat,z.centre_lon),c=svgEl('circle',{cx:q[0],cy:q[1],r:sel?24:11,fill:'none',stroke:z.found?'#17202e':'#d98c1f','stroke-width':2,'stroke-dasharray':z.found?'':'5 4'},svg);
+    tip(c,z.zone_id+' '+z.route_short_name+': planted slow zone, '+(z.found?'found':'missed'));
+    if(!sel&&!z.found)txt(svg,q[0]+14,q[1]+4,z.route_short_name+' (missed)',{'class':'lbl'});});
+  if(o.hot)hs.forEach(h=>{const q=P(h.lat,h.lon),c=svgEl('circle',{cx:q[0],cy:q[1],r:sel?14:5+2*h.max_ratio,'class':'hotring'},svg);
+    tip(c,(h.route||'')+' '+fmt(h.start_m/1000,1)+' to '+fmt(h.end_m/1000,1)+' km: '+fmt(h.max_ratio,1)+'x slower');
+    if(!sel)txt(svg,q[0]+13,q[1]-9,h.route,{'class':'lbl'});});
+}
+
+/* ---------- navigation ---------- */
+const VIEWS=[['overview','Overview'],['routes','Route explorer'],['quality','Data quality'],['live','Live preview (demo)']];
+const nav=$('#tabs');VIEWS.forEach(v=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','tab');b.dataset.v=v[0];b.textContent=v[1];nav.appendChild(b);});
+function show(id){nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===id?'true':'false'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+id));lv.active=(id==='live');if(lv.active)lvStart();else cancelAnimationFrame(lv.raf);
+  try{history.replaceState(null,'','#'+id);}catch(e){}window.scrollTo(0,0);}
+nav.addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v);});
+
+/* ---------- overview ---------- */
+const share=k=>trips.filter(t=>bandOf(t.delay_pct)===k).length/trips.length;
+const tiles=[['ok','Normal',fmt(share('ok')*100)+'%','trips under 30% over timetable',0],['slow','Slow',fmt(share('slow')*100)+'%','30 to 50% over timetable',0],['cong','Congested',fmt(share('cong')*100)+'%','50% or more over timetable',0],
+  ['','Average delay','+'+fmt(avg(trips.map(t=>t.duration_min-t.scheduled_duration_min)))+' min','per trip against the timetable',1],['','Average speed',fmt(avg(trips.map(t=>t.observed_speed_kmph)),1)+' km/h','timetable '+fmt(avg(trips.map(t=>t.timetable_speed_kmph)),1)+' km/h',1]];
+$('#tiles').innerHTML=tiles.map(t=>'<div class="tile '+t[0]+(t[4]?' small':'')+'"><div class="l">'+t[1]+'</div><div class="v">'+t[2]+'</div><div class="s">'+t[3]+'</div></div>').join('');
+$('#ov-bars').innerHTML=routes.slice().sort((a,b)=>b.delay-a.delay).map(r=>{const n=r.trips.length||1,c=k=>r.trips.filter(t=>bandOf(t.delay_pct)===k).length;
+  return '<button type="button" class="barrow" data-r="'+esc(r.name)+'" aria-label="'+esc(r.name)+': '+c('ok')+' normal, '+c('slow')+' slow, '+c('cong')+' congested trips"><span class="nm">'+esc(r.name)+'</span><span class="stack"><i class="ok" style="flex:'+c('ok')+'"></i><i class="slow" style="flex:'+c('slow')+'"></i><i class="cong" style="flex:'+c('cong')+'"></i></span><span class="pc">+'+fmt(r.delay)+'%</span></button>';}).join('');
+function goRoute(name){state.sel=name;renderList();renderRoute();show('routes');}
+$('#ov-bars').addEventListener('click',e=>{const b=e.target.closest('.barrow');if(b)goRoute(b.dataset.r);});
+drawMap($('#ov-map'),{W:900,H:560,label:'Map of slow spots found',hot:true,zones:true,sections:false,stops:false});
+const feed=D.hotspots.hotspots.slice().sort((a,b)=>b.max_ratio-a.max_ratio).map(h=>'<button type="button" class="fi" data-r="'+esc(h.route)+'"><div class="ic hot">!</div><div><b>'+esc(h.route)+', '+fmt(h.start_m/1000,1)+' to '+fmt(h.end_m/1000,1)+' km</b><span>'+fmt(h.max_ratio,1)+'x slower than a normal section. '+Math.round(h.slow_share*100)+'% of trips slow here'+(h.planted_zone?'. Matches planted zone '+esc(h.planted_zone):'')+'.</span></div></button>')
+  .concat(D.hotspots.zones.filter(z=>!z.found).map(z=>'<button type="button" class="fi" data-r="'+esc(z.route_short_name)+'"><div class="ic miss">?</div><div><b>'+esc(z.route_short_name)+': planted zone '+z.zone_id+' not found</b><span>The search skips sections beside bus stops, and a stop sits inside this zone.</span></div></button>'));
+$('#ov-feed').innerHTML=feed.join('');
+$('#ov-feed').addEventListener('click',e=>{const b=e.target.closest('.fi');if(b)goRoute(b.dataset.r);});
+(function(){const hrs={};trips.forEach(t=>{const h=Math.floor(t.mid_hour);(hrs[h]=hrs[h]||[]).push(t.delay_pct);});
+  const items=Object.keys(hrs).map(Number).sort((a,b)=>a-b).map(h=>{const m=avg(hrs[h]);return {x:h+.5,v:m,color:BC[bandOf(m)],text:fmt(m),tip:h+':00 to '+(h+1)+':00: '+fmt(m,1)+'% average delay, '+hrs[h].length+' trips'};});
+  vbars($('#ov-hour'),items,{xd:[6,21],ymax:Math.max.apply(null,items.map(i=>i.v))*1.2,bw:.7,xticks:[6,8,10,12,14,16,18,20],xfmt:v=>v+':00',ylabel:'Delay (%)',label:'Average delay by hour of day',H:300});
+  $('#ov-hour').insertAdjacentHTML('beforeend','<p class="note">Shaded bands are the planted rush-hour windows. Bar colour follows the status bands.</p>');})();
+const rel=D.reliability.v2_all,mt=D.matching,det=D.detector.v2_all,zones=D.hotspots.zones,foundN=zones.filter(z=>z.found).length,falseHot=D.hotspots.hotspots.filter(h=>!h.planted_zone).length;
+const H=[[0,'Route matching','pings placed over 100 m off truth',fmt(mt.nearest_only.over_100m)+' → '+fmt(mt.sequence_aware.over_100m)],
+ [0,'GPS noise detector','precision '+fmt(rel.precision,2)+', recall '+fmt(rel.recall,2),'F1 '+fmt(rel.f1,2)],
+ [0,'Deviation check','none were planted','0 flagged'],[0,'Hotspot search','planted slow zones found, '+falseHot+' false alarms',foundN+' of '+zones.length],
+ [0,'Distance accuracy','vs route length',fmt(D.mobility.distance_err_pct_mean,1)+'%']];
+$('#ov-health').innerHTML=H.map(h=>'<div class="hrow"><span class="dot'+(h[1]==='Hotspot search'||h[1]==='GPS noise detector'?' warn':'')+'"></span><div><b>'+h[1]+'</b><br><span>'+h[2]+'</span></div><em>'+h[3]+'</em></div>').join('')+'<p class="note">Amber marks results with a known limitation. See the Data quality view.</p>';
+
+/* ---------- route explorer ---------- */
+const state={sel:routes.slice().sort((a,b)=>b.delay-a.delay)[0].name};
+function renderList(){
+  const q=$('#rt-search').value.trim().toLowerCase(),f=$('#rt-filter').value,s=$('#rt-sort').value;
+  let rs=routes.filter(r=>(!q||r.name.toLowerCase().includes(q))&&(f==='all'||(f==='hot'?r.hot.length>0:r.band===f)));
+  rs.sort((a,b)=>s==='name'?a.name.localeCompare(b.name):s==='speed'?a.speed-b.speed:s==='stops'?b.nStops-a.nStops:b.delay-a.delay);
+  $('#rt-list').innerHTML=rs.length?rs.map(r=>'<button type="button" class="rcard '+r.band+'" data-r="'+esc(r.name)+'" aria-pressed="'+(r.name===state.sel)+'"><div class="r1"><b>'+esc(r.name)+'</b><span class="dl '+r.band+'">+'+fmt(r.delayMin)+' min</span></div><div class="r2"><span>'+fmt(r.speed,1)+' km/h</span><span>'+fmt(r.slowX,1)+'x slower</span><span>'+fmt(r.len/1000,1)+' km</span></div><div class="r3"><span class="chip '+r.band+'">'+BN[r.band]+'</span>'+(r.hot.length?'<span class="chip hot">Slow spot</span>':'')+'<span class="chip mute">'+r.nStops+' stops</span></div></button>').join(''):'<p class="note" style="padding:8px">No routes match. Clear the search or choose All routes.</p>';
+}
+function ly(id){return $(id).checked;}
+function renderRoute(){
+  const r=byName[state.sel];
+  drawMap($('#rt-map'),{W:900,H:760,selected:r.name,fitAll:ly('#ly-all'),sections:ly('#ly-sec'),stops:ly('#ly-stop'),hot:ly('#ly-hot'),zones:ly('#ly-hot'),label:'Map of route '+r.name});
+  const mn=Math.min.apply(null,r.trips.map(t=>t.delay_pct)),mx=Math.max.apply(null,r.trips.map(t=>t.delay_pct)),scale=Math.max.apply(null,trips.map(t=>t.delay_pct))*1.05;
+  const top=r.secs.slice().sort((a,b)=>b.mean_ratio-a.mean_ratio).slice(0,5);
+  const z=r.zone,zsec=z?r.secs.filter(s=>s.start_m<z.end_m&&s.end_m>z.start_m):[],
+    zmsg=z?(z.found?'<div class="zc found"><b>Planted slow zone '+z.zone_id+'</b> at '+fmt(z.start_m/1000,2)+' to '+fmt(z.end_m/1000,2)+' km: found by the hotspot search.</div>':'<div class="zc miss"><b>Planted slow zone '+z.zone_id+'</b> at '+fmt(z.start_m/1000,2)+' to '+fmt(z.end_m/1000,2)+' km: not found'+(zsec.some(s=>s.near_stop)?'. A bus stop sits inside the zone, so its section is excluded.':'.')+'</div>'):'<div class="zc found" style="background:var(--soft)">No slow zone was planted on this route.</div>';
+  const st=(k,v,c,t)=>'<div class="stat"><div class="k" title="'+t+'">'+k+'</div><div class="vv '+(c||'')+'" style="'+(c?'color:var(--'+c+')':'')+'">'+v+'</div></div>';
+  $('#rt-detail').innerHTML='<div class="dh"><h2>'+esc(r.name)+'</h2><p>'+fmt(r.len/1000,1)+' km · '+r.nStops+' stops · '+r.trips.length+' trips <span class="chip '+r.band+'" style="margin-left:6px">'+BN[r.band]+'</span></p></div>'+
+   '<div class="dcard"><h3>Route stats</h3><div class="stats">'+st('Average delay','+'+fmt(r.delayMin)+' min',r.band,'Measured trip time minus the timetable time, averaged over this route\'s trips')+st('Slowdown',fmt(r.slowX,1)+'x',r.band,'Timetable speed divided by observed speed')+st('Observed speed',fmt(r.speed,1)+' km/h','','Average speed over the whole trip, including time standing')+st('Timetable speed',fmt(r.tt,1)+' km/h','','Speed in a congestion-free schedule')+st('Delay in %',fmt(r.delay,0)+'%','','Delay as a share of the timetable time')+st('Bus stops',r.nStops,'','Stops used by the generator on this route')+'</div></div>'+
+   '<div class="dcard"><h3>Delay through the day</h3><div id="rd-chart"></div><p class="note">Each bar is one trip at the middle of its journey. Shaded bands are the planted rush hours.</p></div>'+
+   '<div class="dcard"><h3>Delay across trips</h3><div class="range"><div class="f" style="left:'+(mn/scale*100)+'%;width:'+Math.max((mx-mn)/scale*100,1)+'%"></div><div class="m" style="left:'+(r.delay/scale*100)+'%" title="Average"></div></div><div class="note" style="margin:0">Fastest trip +'+fmt(mn)+'%, slowest +'+fmt(mx)+'%, average +'+fmt(r.delay)+'% (marker). Based on '+r.trips.length+' trips.</div></div>'+
+   '<div class="dcard"><h3>Slowest sections</h3>'+(top.length?'<table><thead><tr><th>Section</th><th class="n">Slower</th><th class="n">Trips slow</th><th>Status</th></tr></thead><tbody>'+top.map(s=>{const inz=z&&s.start_m<z.end_m&&s.end_m>z.start_m,c=s.hotspot?'<span class="chip hot">Hotspot</span>':s.near_stop?'<span class="chip mute">Beside a stop</span>':s.mean_ratio>=1.3?'<span class="chip slow">Slow</span>':'<span class="chip ok">Normal</span>';
+     return '<tr><td>'+fmt(s.start_m/1000,1)+' to '+fmt(s.end_m/1000,1)+' km'+(inz?'<br><span class="note">planted zone</span>':'')+'</td><td class="n">'+fmt(s.mean_ratio,1)+'x</td><td class="n">'+Math.round(s.slow_share*100)+'%</td><td>'+c+'</td></tr>';}).join('')+'</tbody></table>':'<p class="note">No section data for this route.</p>')+'<p class="note">Sections are 200 m. Sections beside a bus stop are excluded from hotspots because waiting there is normal.</p></div>'+zmsg;
+  const items=r.trips.map(t=>({x:t.mid_hour,v:t.delay_pct,color:BC[bandOf(t.delay_pct)],text:fmt(t.delay_pct)+'%',tip:t.trip_id+': +'+fmt(t.delay_pct,0)+'% ('+fmt(t.observed_speed_kmph,1)+' km/h)'}));
+  vbars($('#rd-chart'),items,{xd:[6,21],ymax:Math.max(80,Math.max.apply(null,items.map(i=>i.v))*1.25),bw:.55,xticks:[6,9,12,15,18],xfmt:v=>v+'h',W:340,H:190,m:{l:30,r:6,t:14,b:26},label:'Delay of each trip on '+r.name});
+  document.querySelectorAll('#rt-list .rcard').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===state.sel));
+}
+$('#rt-list').addEventListener('click',e=>{const b=e.target.closest('.rcard');if(b){state.sel=b.dataset.r;renderRoute();}});
+['#rt-search','#rt-sort','#rt-filter'].forEach(s=>$(s).addEventListener('input',renderList));
+['#ly-sec','#ly-stop','#ly-hot','#ly-all'].forEach(s=>$(s).addEventListener('change',renderRoute));
+renderList();renderRoute();
+
+/* ---------- data quality ---------- */
+(function(){
+  const o=[{l:'Nearest segment only',v:mt.nearest_only.over_100m,c:'#d98c1f'},{l:'Sequence-aware (final)',v:mt.sequence_aware.over_100m,c:'var(--accent)'}];
+  const items=o.map((d,i)=>({x:i+.5,v:d.v,color:d.c,text:fmt(d.v),tip:d.l+': '+fmt(d.v)+' pings'}));
+  const c=vbars($('#q-match-chart'),items,{xd:[0,2],ymax:o[0].v*1.25||1,bw:.5,xticks:false,ylabel:'Pings over 100 m off',label:'Pings placed over 100 m from truth',H:260,m:{l:58,r:14,t:12,b:40}});
+  o.forEach((d,i)=>txt(c.svg,c.sx(i+.5),c.H-14,d.l,{'class':'tick','text-anchor':'middle'}));
+  table($('#q-match-table'),['Error along the route','Nearest only','Sequence-aware'],[['Median (m)',fmt(mt.nearest_only.median_m,1),fmt(mt.sequence_aware.median_m,1)],['95th percentile (m)',fmt(mt.nearest_only.p95_m,1),fmt(mt.sequence_aware.p95_m,1)],['Largest (m)',fmt(mt.nearest_only.max_m),fmt(mt.sequence_aware.max_m)],['Pings over 100 m',fmt(mt.nearest_only.over_100m),fmt(mt.sequence_aware.over_100m)]],[1,2]);
+  $('#q-match-note').textContent='Out of '+fmt(mt.pings)+' pings. A normal ping lies a median '+fmt(mt.ping_to_route_median_m,1)+' m from the route line.';
+  $('#q-thr').textContent=fmt(D.meta.reliability_threshold,2);
+  const r1=D.reliability.v1_heldout;
+  table($('#q-rel'),['Measure','Original 10 held-out trips','120 new trips'],[['Pings',fmt(r1.pings),fmt(rel.pings)],['Injected outliers',fmt(r1.outliers),fmt(rel.outliers)],['Precision',fmt(r1.precision,3),fmt(rel.precision,3)],['Recall',fmt(r1.recall,3),fmt(rel.recall,3)],['F1',fmt(r1.f1,3),fmt(rel.f1,3)],['ROC-AUC',fmt(r1.auc,3),fmt(rel.auc,3)]],[1,2]);
+  $('#q-cm').innerHTML='<div class="h"></div><div class="h">Flagged normal</div><div class="h">Flagged as noise</div><div class="h">Actually normal</div><div class="good"><b>'+fmt(rel.tn)+'</b><br>correct</div><div class="bad"><b>'+fmt(rel.fp)+'</b><br>false alarms</div><div class="h">Actually noise</div><div class="bad"><b>'+fmt(rel.fn)+'</b><br>missed</div><div class="good"><b>'+fmt(rel.tp)+'</b><br>caught</div>';
+  const L=[['normal','Normal','On route and not flagged'],['likely_gps_noise','Likely GPS noise','Flagged by the model'],['potential_route_deviation','Potential route deviation','3+ pings off route, mostly not flagged'],['uncertain','Uncertain','Not enough evidence either way']],d1=D.detector.v1_heldout;
+  table($('#q-dev'),['Label','Meaning','Original 10 trips','120 new trips'],L.map(l=>[l[1],l[2],fmt(d1[l[0]]||0),fmt(det[l[0]]||0)]),[2,3]);
+})();
+
+/* ---------- live preview (demo) ---------- */
+const lv={active:false,playing:!window.matchMedia('(prefers-reduced-motion: reduce)').matches,pos:0,last:0,raf:0,route:null,B:null};
+const SPEED=450,W_M=3000,PXW=300,PXH=420,MPP=W_M/PXW;
+$('#lv-route').innerHTML=routes.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(r=>'<option>'+esc(r.name)+'</option>').join('');
+$('#lv-route').value=state.sel;
+function lvBuild(name){
+  const r=byName[name],pa=r.geo.path;lv.route=r;if(!pa.length)return;
+  const lat0=pa[0][0],lon0=pa[0][1],k=Math.cos(lat0*Math.PI/180)*111320,X=p=>(p[1]-lon0)*k,Y=p=>(lat0-p[0])*110574;
+  const xs=pa.map(X),ys=pa.map(Y),as=pa.map(p=>p[2]);
+  const host=$('#lv-map');host.innerHTML='';
+  const svg=svgEl('svg',{viewBox:'0 0 '+W_M+' '+(W_M*PXH/PXW),role:'img','aria-label':'Route map for the demo'},host);
+  svgEl('rect',{x:-1e6,y:-1e6,width:2e6,height:2e6,'class':'map-bg'},svg);
+  const pts=xs.map((x,i)=>x.toFixed(0)+','+ys[i].toFixed(0)).join(' ');
+  svgEl('polyline',{points:pts,fill:'none',stroke:'var(--casing)','stroke-width':11,'vector-effect':'non-scaling-stroke','stroke-linejoin':'round','stroke-linecap':'round'},svg);
+  svgEl('polyline',{points:pts,fill:'none',stroke:'#b3261e','stroke-width':6,'vector-effect':'non-scaling-stroke','stroke-linejoin':'round','stroke-linecap':'round'},svg);
+  const passed=svgEl('polyline',{fill:'none',stroke:'#8a94a3','stroke-width':6,'vector-effect':'non-scaling-stroke','stroke-linejoin':'round','stroke-linecap':'round'},svg);
+  r.geo.stops.forEach(s=>{svgEl('circle',{cx:(s[1]-lon0)*k,cy:(lat0-s[0])*110574,r:4.5*MPP,fill:'#fff',stroke:'#243246','stroke-width':1.8*MPP},svg);});
+  r.hot.forEach(h=>{svgEl('circle',{cx:(h.lon-lon0)*k,cy:(lat0-h.lat)*110574,r:11*MPP,fill:'rgba(192,57,43,.25)',stroke:'#c0392b','stroke-width':2*MPP},svg);});
+  const bus=svgEl('g',{},svg);
+  const gl=svgEl('g',{transform:'scale('+MPP+')'},bus);
+  svgEl('circle',{r:17,fill:'#b3261e',stroke:'#fff','stroke-width':3},gl);svgEl('rect',{x:-8,y:-9,width:16,height:14,rx:3,fill:'#fff'},gl);svgEl('rect',{x:-6,y:-6,width:12,height:5,fill:'#b3261e'},gl);svgEl('circle',{cx:-4,cy:8,r:1.8,fill:'#fff'},gl);svgEl('circle',{cx:4,cy:8,r:1.8,fill:'#fff'},gl);
+  lv.B={svg:svg,bus:bus,passed:passed,xs:xs,ys:ys,as:as,len:r.len};
+  $('#lv-jumps').innerHTML='<button type="button" data-p="0">Start</button>'+r.hot.map(h=>'<button type="button" data-p="'+Math.max(h.start_m-1200,0)+'">Approach slow spot at '+fmt(h.start_m/1000,1)+' km</button>').join('')+'<button type="button" data-p="'+Math.max(r.len-600,0)+'">End</button>';
+  $('#lv-pill').textContent='Route '+r.name;$('#lv-badge').textContent=r.name;
+  $('#lv-scrub').max=Math.round(r.len);lv.pos=0;lvUpdate();
+}
+function lvAt(pos){const B=lv.B,as=B.as;let lo=0,hi=as.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(as[m]<=pos)lo=m;else hi=m;}
+  const t=as[hi]===as[lo]?0:Math.min(Math.max((pos-as[lo])/(as[hi]-as[lo]),0),1);return {x:B.xs[lo]+t*(B.xs[hi]-B.xs[lo]),y:B.ys[lo]+t*(B.ys[hi]-B.ys[lo]),i:lo};}
+function lvUpdate(){
+  const B=lv.B,r=lv.route;if(!B)return;const pos=Math.min(Math.max(lv.pos,0),B.len),p=lvAt(pos);
+  B.bus.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')');
+  B.svg.setAttribute('viewBox',(p.x-W_M/2).toFixed(1)+' '+(p.y-W_M*PXH/PXW/2).toFixed(1)+' '+W_M+' '+(W_M*PXH/PXW));
+  B.passed.setAttribute('points',B.xs.slice(0,p.i+1).map((x,i)=>x.toFixed(0)+','+B.ys[i].toFixed(0)).join(' ')+' '+p.x.toFixed(0)+','+p.y.toFixed(0));
+  const ns=r.geo.stops.find(s=>s[2]>pos),nh=r.hot.filter(h=>h.end_m>pos).sort((a,b)=>a.start_m-b.start_m)[0];
+  $('#lv-pos').textContent=fmt(pos/1000,1)+' of '+fmt(B.len/1000,1)+' km';
+  $('#lv-next').textContent=ns?'Next stop in '+fmt(Math.max(ns[2]-pos,0))+' m':'End of route';
+  $('#lv-ahead').textContent=nh?(nh.start_m<=pos?'In a slow spot found by the analysis':'Slow spot ahead in '+fmt((nh.start_m-pos)/1000,1)+' km'):'No known slow spot ahead';
+  $('#lv-scrub').value=Math.round(pos);
+}
+function lvFrame(t){if(!lv.active)return;const dt=Math.min((t-lv.last)/1000,.1);lv.last=t;if(lv.playing&&lv.B){lv.pos+=dt*SPEED;if(lv.pos>lv.B.len+600)lv.pos=0;lvUpdate();}lv.raf=requestAnimationFrame(lvFrame);}
+function lvStart(){if(!lv.B||lv.route.name!==$('#lv-route').value)lvBuild($('#lv-route').value);lv.last=performance.now();cancelAnimationFrame(lv.raf);lv.raf=requestAnimationFrame(lvFrame);$('#lv-play').textContent=lv.playing?'Pause':'Play';}
+$('#lv-jumps').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;lv.pos=+b.dataset.p;lvUpdate();});
+$('#lv-route').addEventListener('change',()=>lvBuild($('#lv-route').value));
+$('#lv-play').addEventListener('click',()=>{lv.playing=!lv.playing;$('#lv-play').textContent=lv.playing?'Pause':'Play';});
+$('#lv-scrub').addEventListener('input',e=>{lv.playing=false;$('#lv-play').textContent='Play';lv.pos=+e.target.value;lvUpdate();});
+
+show(((location.hash||'#overview').slice(1).replace(/[^a-z]/g,''))&&VIEWS.some(v=>v[0]===location.hash.slice(1))?location.hash.slice(1):'overview');
+})();
+</script>
+</body>
+</html>

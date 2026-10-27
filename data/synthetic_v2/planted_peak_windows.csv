@@ -1,0 +1,3 @@
+name,start_hour,end_hour,speed_factor,dwell_factor
+morning_peak,8.0,10.5,0.7,1.5
+evening_peak,17.0,20.0,0.65,1.5

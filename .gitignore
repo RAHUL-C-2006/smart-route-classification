@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.ipynb_checkpoints
+# GTFS is large public data (shapes.txt alone has 2.5M rows); download it again instead of storing it here
+data/gtfs/
